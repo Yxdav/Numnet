@@ -10,6 +10,7 @@ from myutils.network import *
 from modules.Arpy import *
 
 from typing import Callable, Dict
+from collections import OrderedDict
 from time import sleep
 from contextlib import contextmanager
 from tkinter import Canvas, messagebox, PhotoImage
@@ -20,8 +21,9 @@ RECON_PATH = "./recon/recon.json"
 ROUTER_PATH ="./assets/images/router.png"
 REFRESH_PATH ="./assets/images/refresh.png"
 COMP_PATH = "./assets/images/computadora.png"
-EXIT_MSG = "Are you sure to want to exit, doing so will not save gathered information in /recon/recon.json. Press ctrl+s if you want to save. The information will be stored in the results folder. Report issue to https://github.com/Haz3l-cmd/Netnum"
+EXIT_MSG = "Are you sure to want to exit, doing so will not save gathered information in /recon/recon.json. Press ctrl+s if you want to save. The information will be stored in the results folder. Report issue to https://github.com/Haz3l-cmd/Numnet"
 DISCLAIMER_MSG = "This project was created solely for learning purposes and not otherwise. I am not responsible for your actions."
+
 
 class Gmap(customtkinter.CTk):
       
@@ -32,11 +34,11 @@ class Gmap(customtkinter.CTk):
       hosts_list:list = all_hosts(NET_ADDR) # List of all hosts in the subnet
       hosts_list.insert(0, "None")
       #Internals constants for configuration purposes
-      MODULE_DICT:Dict[str, Callable] = {} # Maps module to their respective method that constructs their options interface
+      MODULE_DICT:Dict[str, Callable] = OrderedDict() # Maps module to their respective method that constructs their options interface
       CURRENT_MODULES = {"current": None} # Keep track of current module
       
       #Mapper constants
-      TAG_TO_ICON = {} # Maps Tags to PhotoImage objects
+      TAG_TO_ICON = OrderedDict() # Maps Tags to PhotoImage objects
       
       #Internal constants for root window
       _WINDOW_DIMENSION = "700x400"
@@ -46,6 +48,8 @@ class Gmap(customtkinter.CTk):
       PADDING = 5 
       LABEL_FONT_SIZE = 16
       CENTER = "nsew"
+
+      TL_COUNT = 0
 
       def __init__(self):
           """This function is responsible for initialising the main window"""
@@ -207,32 +211,43 @@ class Gmap(customtkinter.CTk):
           
           for column in range(column):
               widget.columnconfigure(column, weight=weight)
+      def TLC(self)->None:
+          """Keeps track of self.TL_COUNTer"""
+          
+          self.TL_COUNT -=1
+          self.window.destroy()
 
       def create_toplevel(self, *args)->None:
-           """This method implements the top level window which is also the map that allows a graphical representation of 
+            """This method implements the top level window which is also the map that allows a graphical representation of 
               the network. *NOTE* Nodes will appear after scanning the network and pressing the refres button. The gateway is always centered
               cannot be dragged around
 
               :param args: Additonal arguements
 
               :Return: None
-           """
-           self.window = customtkinter.CTkToplevel(self)
-           self.window.minsize(800, 800)
-           self.my_canvas = Canvas(master=self.window,bg="black") # Sets up black canvas, who the f*ck uses light mode anyways
-           self.my_canvas.pack(expand=True, fill="both")
-           
-           # Bindings, Implementation are found withinn this file itself, though that might change in the
-           # future to be more organised
-           self.my_canvas.bind("<Button-3>", self.scan)
-           self.my_canvas.bind("<Button3-Motion>", self.drag)
-           self.my_canvas.bind("<Motion>", self.display_coords)
-           self.my_label = customtkinter.CTkLabel(master=self.my_canvas, text="X: None Y: None", height=20, width=100)
-           self.my_label.pack(padx="10px", pady="10px", anchor="ne")
-           self.refresh_map_button = customtkinter.CTkButton(master=self.my_canvas, text="Refresh!", command=self.map_refresh, height=30, width=30)
-           self.refresh_map_button.pack(padx=self.PADDING, pady=self.PADDING, anchor="ne")
-           self.my_canvas.bind("<Control-s>", SaveFile())
-           
+            """
+            if self.TL_COUNT < 1:
+             self.window = customtkinter.CTkToplevel(self)
+             self.window.minsize(400, 400)
+             self.window.protocol("WM_DELETE_WINDOW", self.TLC)
+             self.my_canvas = Canvas(master=self.window,bg="black") # Sets up black canvas, who the f*ck uses light mode anyways
+             self.my_canvas.pack(expand=True, fill="both")
+             
+             # Bindings, Implementation are found withinn this file itself, though that might change in the
+             # future to be more organised
+             self.my_canvas.bind("<Button-3>", self.scan)
+             self.my_canvas.bind("<Button3-Motion>", self.drag)
+             self.my_canvas.bind("<Motion>", self.display_coords)
+             self.my_label = customtkinter.CTkLabel(master=self.my_canvas, text="X: None Y: None", height=20, width=100)
+             self.my_label.pack(padx="10px", pady="10px", anchor="ne")
+             self.refresh_map_button = customtkinter.CTkButton(master=self.my_canvas, text="Refresh!", command=self.map_refresh, height=30, width=30)
+             self.refresh_map_button.pack(padx=self.PADDING, pady=self.PADDING, anchor="ne")
+             self.my_canvas.bind("<Control-s>", SaveFile())
+             self.TL_COUNT += 1
+            else:
+                with self.change_state() as tbox:
+                     tbox.configure(text_color="orange")
+                     tbox.insert(index="end", text="\n[-]Only one top level window can be opened at a time")
 
       def map_refresh(self)->None:
           """This method is responsible for refreshing the canvas. It is responsible
@@ -291,13 +306,14 @@ class Gmap(customtkinter.CTk):
           self.my_label.configure(text=f"X: {self.my_canvas.canvasx(event.x)} Y:{self.my_canvas.canvasy(event.y)}")
 
       def generate_icon(self, path:str, text:str)->None:
-          """This method generates icons/images on the canvas
+        """This method generates icons/images on the canvas
              
              :param path: File path of image/icon
              :param text: Text to be display below icon/image, this has to be the IP and MAC. Fortunately self.map_refresh() handles all of that for us
 
              :Return: None
-          """
+        """
+        try:
           if path == COMP_PATH:
             img = Image.open(COMP_PATH) # Opens image
             resized_image = img.resize((100,100)) # Resizez image to appropriate size
@@ -368,7 +384,13 @@ class Gmap(customtkinter.CTk):
             x1, y1, x2, y2 = self.my_canvas.bbox(self.my_image)
             self.my_canvas.create_text(x1, y2-20, text=text, fill="white",tags=self.text_tag, anchor="nw", width=(x2-x1)+20)
             self.my_canvas.create_text(x1, y2-20, text=None, fill="white",tags=self.text_tag, anchor="nw", width=(x2-x1)+20) #Filler
-         
+        
+        except  Exception as e:
+               with self.change_state() as tbox:
+                     tbox.configure(text_color="red")
+                     tbox.insert(index="end", text="\n[Frequent change detected!!]-> Your seeing because you are probably changing settings unnecessarily and which doesn't exacly make sense. Please restart your application. Report issue to https://github.com/Haz3l-cmd/Numnet")
+                     tbox.insert(index="end", text=f"\n{e}")
+
       
       def ARP_options_ui(self, frame)->None:
           """This method is responsible for constructing the interface that allows users to
@@ -390,7 +412,7 @@ class Gmap(customtkinter.CTk):
           
           self.gateway_ip_label = customtkinter.CTkLabel(master=frame, text="Gateway IP :", font=("robot", self.LABEL_FONT_SIZE))
           self.gateway_ip_label.grid(row=1, column=0, pady=self.PADDING, padx=self.PADDING,)
-          self.gateway_ip_value = customtkinter.CTkComboBox(master=frame, values=self.hosts_list)
+          self.gateway_ip_value = customtkinter.CTkOptionMenu(master=frame, values=self.hosts_list)
           self.gateway_ip_value.grid(row=1, column=1, pady=self.PADDING)
           self.gateway_ip_value.configure(command=InitRouter(self))
           
@@ -416,7 +438,7 @@ class Gmap(customtkinter.CTk):
 
           scan_button = customtkinter.CTkButton(master=frame, text="Scan", command=self.ARP_scan )
           scan_button.grid(row=6, column=1, pady=self.PADDING)
-          
+        
       def ARP_scan(self)->None:
           """This function starts the scan and interfaces with this file(__file__) to display results
              in the info panel and temporarily save it to /recon/recon.json. Additionally the results of recon.json can

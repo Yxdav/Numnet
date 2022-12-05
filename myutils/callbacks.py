@@ -135,7 +135,7 @@ class SaveFile(Callback):
             messagebox.showinfo(title="Success!", message="Data has been saved to the Results folder")
 
           except Exception as e:
-                   messagebox.showerror(title="Error", message=f"{e}\n Report issue to https://github.com/Haz3l-cmd/Netnum")
+                   messagebox.showerror(title="Error", message=f"{e}\n Report issue to https://github.com/Haz3l-cmd/Numnet")
 
 class HelpMenu(Callback):
       """This sub class is responsible for the help menu"""
@@ -162,13 +162,19 @@ class InitRouter(Callback):
       
       def handler(self, choice):
           root = self.args[0]
-          temp_dict = {root.gateway_ip_value.get(): "Not yet discovered"}
+          temp_dict = {choice: "None"}
           try:
             with open(RECON_PATH, "r") as fp:
                  data = json.load(fp)
             if data:
+               key_to_rplc = None
+               for key,val in data.items():
+                  if val == "None":
+                     key_to_rplc = key
+               data.pop(key_to_rplc)
                with open(RECON_PATH, "w") as fp:
-                    json.dump(data.update(temp_dict), fp, indent=4)
+                    data.update(temp_dict)
+                    json.dump(data, fp, indent=4)
            
               
           except json.decoder.JSONDecodeError:
