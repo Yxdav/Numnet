@@ -22,6 +22,14 @@ Netnum is a network enumeration tool written entirely in python and provides the
 - This software is current in a "pre pre-alpha state" so please feel free to report any bugs
 - The ARP_scan module currently only scans the network but you may have seen additional parameters which are not used. These parameters will be used in the next version of Netnum where ARP spoofing will be implemented and the UDP_scan  will be made available
 
+## Usage
+- `Ctrl+h` --> Causes help menu to pop up
+- `Ctrl+s` --> Save gathered information as as json file in `Resources` folder.(This folder may or may not be already there, nonetheless it will automatically created)
+- `Ctrl+w` --> Opens the network mapper, this allows you to visualise the network
+- `Ctrl+Scroll` --> Zoom in/out of info panel
+- `Ctrl+l` --> Clear control panel
+
+
 ---
 # Warning
 - *This program has only been tested on windows so far, hence Linux users or users from other operating systems may experience compatibility issues. However, we assure we are working to make sure that this program can run on almost all platforms*
