@@ -7,7 +7,7 @@ import json
 #Custom modules
 from myutils.callbacks import *
 from myutils.network import *
-from modules.ARP_scan import *
+from modules.Arpy import *
 
 from typing import Callable, Dict
 from time import sleep
@@ -152,7 +152,7 @@ class Gmap(customtkinter.CTk):
           self.inner_info_panel_text_box.configure(state="disabled")
 
           # After initialising all necessary widgets
-          self.module_drop_menu.configure(command=OptionMenu(self)) # See implementation in myutils/callbacks.py
+          self.module_drop_menu.configure(command=OptionMenuUI(self)) # See implementation in myutils/callbacks.py
           self.inner_info_panel_text_box.bind("<Control-MouseWheel>", ResizeTextBox(self.inner_info_panel_text_box)) # See implementation in myutils/callbacks.py
           
           # Shortcuts, try Ctrl+h for help menu or read the README.md(Usage section) file at https://github.com/Haz3l-cmd/Netnum
@@ -256,8 +256,8 @@ class Gmap(customtkinter.CTk):
             
             for key in data:
                 
-                if data.get(key)[1] == "Gateway":
-                  self.generate_icon(ROUTER_PATH, f"IP: {key}\n MAC:{data.get(key)[0]}")
+                if key == self.gateway_ip_value.get():
+                  self.generate_icon(ROUTER_PATH, f"IP: {key}\n MAC:{data.get(key)}")
                 else:
                   self.generate_icon(COMP_PATH, f"IP: {key}\nMAC:{data.get(key)}")
 
@@ -362,7 +362,7 @@ class Gmap(customtkinter.CTk):
             self.text_tag = f"{self.my_image}-Complement"
 
             # See implementation of MoveCompIcon() in myutils/callbacks.py
-            self.my_canvas.tag_bind(self.my_image,"<Button1-Motion>", MoveCompIcons(self, self.my_image, self.text_tag), add="+")
+            # self.my_canvas.tag_bind(self.my_image,"<Button1-Motion>", MoveCompIcons(self, self.my_image, self.text_tag), add="+")
             
             # These coordinates are used to align label with router icon/image
             x1, y1, x2, y2 = self.my_canvas.bbox(self.my_image)
@@ -392,6 +392,7 @@ class Gmap(customtkinter.CTk):
           self.gateway_ip_label.grid(row=1, column=0, pady=self.PADDING, padx=self.PADDING,)
           self.gateway_ip_value = customtkinter.CTkComboBox(master=frame, values=self.hosts_list)
           self.gateway_ip_value.grid(row=1, column=1, pady=self.PADDING)
+          self.gateway_ip_value.configure(command=InitRouter(self))
           
           self.net_ip_label = customtkinter.CTkLabel(master=frame, text="Subnet IP :", font=("robot", self.LABEL_FONT_SIZE))
           self.net_ip_label.grid(row=2, column=0, pady=self.PADDING, padx=self.PADDING,)

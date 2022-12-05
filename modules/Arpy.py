@@ -1,3 +1,8 @@
+
+
+"""WARNING: This code is mess don't even bother looking at it"""
+
+
 #imports
 from scapy.all import *
 from collections import OrderedDict
@@ -17,9 +22,7 @@ RECON_PATH = "./recon/recon.json"
 
 
 class Arpy:
-    """Objects of this class contain methods which can launch an ARP spoofing attack. This particular script was is not meant
-       to be modified, it should be interacted from the command line, you are welcome to read it so as to gain bettter understading of the 
-       underlying features
+    """This program is a modified of Arpy(https://github.com/Haz3l-cmd/Arpy) and can interface with netnum.py
     """
     
     MODULE_NAME = "Arpy"
@@ -39,6 +42,9 @@ class Arpy:
            :param mac: MAC address of attacker, this can be changed using the setter method set_mac(), see below
            :param interval: interval in seconds between gratuitous ARP reply to target/s
            :param two_way_flag: A bolean value which decides whether the ARP spoofing attacking in two way or on way
+           :param target_ip: Ip address of target
+           :param threads: Number of threads to use when scanning
+           :param output_frame: The widget(Textbox) where output should be displayed
         """
 
         self.__MAC = mac 
@@ -51,29 +57,26 @@ class Arpy:
         self.threads = threads
         
         
-        self.__check_obj_attribute()
+        self.__check_obj_attribute() # Checks attributes given by user
         
+        # Add all hosts to a queue as it is thread safe
         for ip_addr in list(ip.IPv4Network(self.subnet).hosts()):
             self.__IP_QUEUE.put(str(ip_addr))
             
         
-        if os.name == "nt":
-           try:
-               from colorama import init 
-               init()
-           except Exception as e:
-               print(e)
+       
                 
         self.__UI()
         self.get_mac(target=self.target_ip, threads=self.threads)
     
-    def __check_obj_attribute(self):
+    def __check_obj_attribute(self)->None:
         """This method validates attributes of instances of this class, e.g correct types, valid IP addresses
            
+           :Return: None
         """
 
         try:
-           
+           # Checks if IP and network addr is private
            private_subnet =  ip.IPv4Network(self.subnet).is_private
            private_gateway = ip.ip_address(self.gateway).is_private
            self.subnet = ip.IPv4Network(self.subnet)
@@ -93,7 +96,9 @@ class Arpy:
         except ValueError:
             self.err_insert(text="incorrect IP Format")
             sys.exit()
-        
+
+
+        # Checks if interval is valid
         if self.interval.isdigit():
            self.interval = int(self.interval)
         else:
@@ -139,8 +144,10 @@ class Arpy:
           
  
 
-    def __UI(self):
+    def __UI(self)->None:
         """This method initialises the command line interface for the user
+
+           :Return
         """
         
         self.insert(text="Object attributes seem ok")
@@ -165,10 +172,12 @@ class Arpy:
            
 
 
-    def __get_mac(self,target:str =None):
+    def __get_mac(self,target:str =None)->None:
         """This private method is invoked by get_mac
           
           :param target: IP addres of target, if target is None the method keeps taking an IP address from a Queue object until the Queue object is exhausted, i.e an exception is thrown as it is empty
+
+          :Return:None
         """
 
         
@@ -179,10 +188,7 @@ class Arpy:
                  current_ip=self.__IP_QUEUE.get_nowait()
                  arp_ans = sr1(ARP(pdst=current_ip,hwlen=6,plen=4, op=1), verbose=False,timeout=1)
                  tgt_mac = arp_ans[0].hwsrc
-                 if current_ip == self.gateway:
-                    self.__IP_TO_MAC.update({current_ip:[tgt_mac,"Gateway"]})
-                 else:   
-                    self.__IP_TO_MAC.update({current_ip:tgt_mac})
+                 self.__IP_TO_MAC.update({current_ip:tgt_mac})
             
               except queue.Empty:
                    # self.insert(text="Finished scanning whole subnet...")
@@ -209,14 +215,15 @@ class Arpy:
 
 
     
-    def get_mac(self,target:str = None,threads:int =5):
+    def get_mac(self,target:str = None,threads:int =5)->None:
         """This method is supposed to be accessed by the user, the latter spawns a specified number of threads to scan all the IP address on the network concurrently
 
            :param target: The IP address of the target,  if target is None the method keeps taking an IP address from a Queue object until the Queue object is exhausted, i.e an exception is thrown as it is empty
            :param threads: The number of threads to be spawned to scan the network concurrently, defaults to 5 
         """
-    
+        
         if target is None:
+            # Starts threads as specified by threads
             self.insert(text = f"Starting {threads} threads")
             self.insert(text="Scanning..., This will vary with respect to the number of threads running")
             for _ in range(threads):
@@ -231,8 +238,16 @@ class Arpy:
         else:
             self.__get_mac(target)
         
+        # After scan is done, up recon.json
+        with open(RECON_PATH, "r") as fp:
+             data = json.load(fp)
+        
+        for ip,mac in self.__IP_TO_MAC.items():
+            tmp = {ip:mac}
+            data.update(tmp)
+        
         with open(RECON_PATH, "w") as fp:
-             json.dump(self.__IP_TO_MAC, fp, indent=4)
+                json.dump(data, fp, indent=4)
 
         for key in self.__IP_TO_MAC:
             self.insert(text = f"{key}->{self.__IP_TO_MAC.get(key)}")
@@ -241,18 +256,18 @@ class Arpy:
         
 
    
-    def set_mac(self,mac:str): 
+    def set_mac(self,mac:str)->None: 
         """setter method which changes MAC address of attacker
-           param mac: MAC address to change to
+           
+           :param mac: MAC address to change to
+
+           :Return: None
         """
         self.__LOCAL_MAC = mac
 
 
     def inject_packet(self,uindex:int , interval:int):
-            """The method that actually lauches the attack and is invoked after the user selects the target
-           
-           :param uindex: Index of target, selected by the user
-           :interval: interval in seconds between gratuitous ARP reply to target/s
+            """Not implemented, need to be modified
             """
         
             try:
@@ -272,7 +287,12 @@ class Arpy:
             except KeyboardInterrupt:
                 print("\nUser ended program")
     
-    def insert(self, text=None):
+    def insert(self, text:str =None)->None:
+        """This method outputs message to info panel, you can think of it as redirecting stdout to info panel
+           
+           :param text: text to ouput
+           :Return:None
+        """
         self.frame.configure(text_color="lime green")
         self.frame.configure(state="normal")
         self.frame.insert(index="end", text="\n[{}] (Using {}) : [+] {}".format(strftime("%H:%M:%S"),self.MODULE_NAME, text))
@@ -280,6 +300,11 @@ class Arpy:
     
     
     def err_insert(self, text=None):
+        """This method outputs error message to info panel, you can think of it as redirecting stderr to info panel
+           
+           :param text: text to ouput
+           :Return:None
+        """
         self.frame.configure(text_color="orange")
         self.frame.configure(state="normal")
         self.frame.insert(index="end", text="\n[{}] (Using {}) : [-] {}".format(strftime("%H:%M:%S"),self.MODULE_NAME, text))

@@ -1,15 +1,16 @@
 import customtkinter
 import os
-
+import json
 
 from .network import *
 
 
 from abc import ABC, abstractmethod
-from json import load
 from time import sleep, strftime
 from tkinter import messagebox
+from sys import stderr
 
+ROUTER_PATH ="./assets/images/router.png"
 RECON_PATH = "./recon/recon.json"
 
 class Callback(ABC):
@@ -34,7 +35,7 @@ class Callback(ABC):
       	  """Implement here"""
 
 
-class OptionMenu(Callback):
+class OptionMenuUI(Callback):
       """This subclass of Callback is responsible for changing self.inner_user_options_frame,
           which is the frame that allows user to change module options, with respect to the selected
           value(module) in the drop down menu.
@@ -148,3 +149,29 @@ class HelpMenu(Callback):
       def handler(self, event):
           HELP_MSG = "<Ctrl+s> --> Save \n<Ctrl+Scroll> --> Zo0m in/out\n<Ctrl+l> --> Clear info panel\n<Ctrl+w> --> Open map(May be closed if unused\n<Ctrl+h> --> Help"
           messagebox.showinfo(title="Stuck?!", message=HELP_MSG)
+
+class InitRouter(Callback):
+      """This subclass ensures that the router is always present in the diagram"""
+
+      def __init__(self, *args, **kwargs):
+         self.args = args 
+         self.kwargs = kwargs
+
+      def __call__(self,choice):
+          self.handler(choice)
+      
+      def handler(self, choice):
+          root = self.args[0]
+          temp_dict = {root.gateway_ip_value.get(): "Not yet discovered"}
+          try:
+            with open(RECON_PATH, "r") as fp:
+                 data = json.load(fp)
+            if data:
+               with open(RECON_PATH, "w") as fp:
+                    json.dump(data.update(temp_dict), fp, indent=4)
+           
+              
+          except json.decoder.JSONDecodeError:
+                 with open(RECON_PATH, "w") as fp:
+                    json.dump(temp_dict, fp, indent=4)
+           
