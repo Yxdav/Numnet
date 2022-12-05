@@ -8,10 +8,10 @@ def get_local_ip()->str:
        
        :Return: IP address of user
     """
-	with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-		 s.connect(("192.168.1.1",2))
-		 local_ip = s.getsockname()[0]
-		 return local_ip
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+         s.connect(("192.168.1.1",2))
+         local_ip = s.getsockname()[0]
+         return local_ip
 
 def get_local_net_addr(ip_addr:str)->str:
     """Calculates network address from locall IP
@@ -33,8 +33,8 @@ def get_local_net_addr(ip_addr:str)->str:
 def get_mac()->str : 
     """Returns MAC address
     """
-	mac = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
-	return mac
+    mac = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
+    return mac
 
 def all_hosts(net_addr)->list[str]:
     """Returns a list of all host within a subnet
