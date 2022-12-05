@@ -1,1 +1,28 @@
-README.md
+# Netnum
+![image](https://user-images.githubusercontent.com/91953982/205550177-18f0b9c4-7e2b-4ce8-bfad-aeaf99828d74.png)
+## About
+Netnum is a network enumeration tool written entirely in python and provides the user with a graphical interface. Netnum is easy and fast to use due to its built-in shortcuts, see below. Moreover, it also allows you to visualise the network, see the demo below.
+
+## Installation guide
+ ***Note that after running the *requirements.txt*, it should run out of the box. The installation is pretty simple, just copy and paste the command/s below, you may wish to run it in a virtual envinronment, see [here](https://docs.python.org/3/library/venv.html)***
+    
+-    `pip3 install -r requirements.txt`
+
+## Demo 
+      pass
+
+## File structure
+- assets/images -> Contain images
+- modules/ -> Contain the modules that can be used, current only an ARP scan is possible
+- myutils/ -> Contains classes and functions to facilate  this project, the individual files in *myutils* are documented
+- Recon/ -> Where gathered information is temporarily stored during runtime
+- Resources/ -> This folder is created after the user presses `Ctrl+s` to save the data aquired. The data is saved in a JSON format and the file name is the timestamp of when it was saved/created
+
+## Note
+- This software is current in a "pre pre-alpha state" so please feel free to report any bugs
+- The ARP_scan module currently only scans the network but you may have seen additional parameters which are not used. These parameters will be used in the next version of Netnum where ARP spoofing will be implemented and the UDP_scan  will be made available
+
+---
+# Warning
+- *This program has only been tested on windows so far, hence Linux users or users from other operating systems may experience compatibility issues. However, we assure we are working to make sure that this program can run on almost all platforms*
+
