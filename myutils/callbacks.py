@@ -13,6 +13,13 @@ from tkinter import messagebox
 RECON_PATH = "./recon/recon.json"
 
 class Callback(ABC):
+      """This abstract method represents the blueprint for following sub classes. Instances
+         if this class are callables, this allows us to circumvent the limation of not being able 
+         to pass arguemnts to callbacks, e.g if we want to  invoke the callback with the arguement text="hello" 
+         to customTkinter.CTkButton(master=self), instead of customTkinter.CTkButton(master=self, command=close),
+         we would do customTkinter.CTkButton(master=self, command=CloseClass(text="hello")), in this case the callback will be like this :
+         CloseClass(text="hello")(), i.e CloseClass(text="hello").__call__(self). As you can see, this gives us much more control and flexibility.
+      """
       
       @abstractmethod
       def __init__(self, *args, **kwargs):
@@ -28,6 +35,10 @@ class Callback(ABC):
 
 
 class OptionMenu(Callback):
+      """This subclass of Callback is responsible for changing self.inner_user_options_frame,
+          which is the frame that allows user to change module options, with respect to the selected
+          value(module) in the drop down menu.
+      """
       def __init__(self, *args, **kwargs):
           self.args = args
           self.kwargs = kwargs
@@ -36,7 +47,7 @@ class OptionMenu(Callback):
           self.handler(choice)
 
       def handler(self, choice):
-          
+          # Here self.app refers to the root/main window, which would be "self" in netnum.py
           self.app = self.args[0]
          
          
@@ -57,45 +68,8 @@ class OptionMenu(Callback):
           self.app.CURRENT_MODULES.update({"current":choice})
           
           
-
-
-class ModifyLabelValues(Callback):
-
-      def __init__(self, *args, **kwargs):
-         self.args = args 
-         self.kwargs = kwargs
-
-      def __call__(self):
-          self.handler()
-      
-      def handler(self):
-          ip_value_label = self.args[0]
-          net_value_label = self.args[1]
-          mac_value_label = self.args[2]
-
-          new_ip_value = get_local_ip()
-          new_net_value = get_local_net_addr(new_ip_value)
-          new_mac_value =  get_mac()
-
-          ip_value_label.configure(text=new_ip_value)
-          net_value_label.configure(text=new_net_value)
-          mac_value_label.configure(text=new_mac_value)
-
-class GetSwitchValue(Callback):
-
-      def __init__(self, *args, **kwargs):
-         self.args = args 
-         self.kwargs = kwargs
-
-      def __call__(self):
-          self.handler()
-      
-      def handler(self):
-          switch_value = self.args[0].get()
-          return switch_value
-
 class ResizeTextBox(Callback):
-
+      """This sub class is responsible for the zooming in and out of info panel"""
       def __init__(self, *args, **kwargs):
          self.args = args 
          self.kwargs = kwargs
@@ -137,6 +111,9 @@ class MoveCompIcons(Callback):
 
 
 class SaveFile(Callback):
+      """This sub class is responsible for saving information gathered to the Resources folder
+        *NOTE TO SELF* : Remove hard values
+      """
       def __init__(self, *args, **kwargs):
          self.args = args 
          self.kwargs = kwargs
@@ -160,7 +137,7 @@ class SaveFile(Callback):
                    messagebox.showerror(title="Error", message=f"{e}\n Report issue to https://github.com/Haz3l-cmd/Netnum")
 
 class HelpMenu(Callback):
-
+      """This sub class is responsible for the help menu"""
       def __init__(self, *args, **kwargs):
          self.args = args 
          self.kwargs = kwargs
