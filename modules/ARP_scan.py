@@ -1,7 +1,6 @@
 #imports
 from scapy.all import *
 from collections import OrderedDict
-from termcolor import colored
 from uuid import getnode
 from time import sleep, strftime
 
