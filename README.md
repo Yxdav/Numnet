@@ -39,4 +39,5 @@ https://user-images.githubusercontent.com/91953982/205724566-5499f469-c436-4ee4-
 # Warning
 - *This program has only been tested on windows so far, hence Linux users or users from other operating systems may experience compatibility issues. However, we assure we are working to make sure that this program can run on almost all platforms*
 - If the program was not closed proporly and you experience some issue, try deleting /recon/recon.json
+- This is the stable Version
 
