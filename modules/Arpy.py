@@ -26,126 +26,36 @@ class Arpy:
     """
     
     MODULE_NAME = "Arpy"
+    
 
     #Variables that should not be altered
-    __IP_QUEUE = queue.Queue()
-    __LOCAL_MAC = ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
-    __IP_TO_MAC = dict()
-    __OS_NAME = os.name
-    __THREADS = list()
     
-    def __init__(self, subnet:str, gateway:str, mac:str = __LOCAL_MAC, interval:int = None,two_way_flag:bool = False, target_ip:str =None, threads:int|str = 5, output_frame=None):
+    def __init__(self, target:str = None, gateway:str = None, output_frame = None):
         """This method initialises the object and validates the object attributes
            
-           :param subnet: Network address, e.g 192.168.1.0/24
+           :param target: IP address of target
            :param gateway: IP address of gateway
-           :param mac: MAC address of attacker, this can be changed using the setter method set_mac(), see below
-           :param interval: interval in seconds between gratuitous ARP reply to target/s
-           :param two_way_flag: A bolean value which decides whether the ARP spoofing attacking in two way or on way
-           :param target_ip: Ip address of target
-           :param threads: Number of threads to use when scanning
-           :param output_frame: The widget(Textbox) where output should be displayed
         """
-
-        self.__MAC = mac 
-        self.subnet = subnet
+        self.target_mac = None 
+        self.target = target
         self.gateway = gateway
-        self.interval = interval
-        self.two_way_flag = two_way_flag
         self.frame = output_frame
-        self.target_ip = target_ip
-        self.threads = threads
+        self.is_gateway = False
         
+        if self.target == self.gateway:
+           self.is_gateway = True
+
         
-        self.__check_obj_attribute() # Checks attributes given by user
-        
-        # Add all hosts to a queue as it is thread safe
-        for ip_addr in list(ip.IPv4Network(self.subnet).hosts()):
-            self.__IP_QUEUE.put(str(ip_addr))
-            
-        
-       
-                
-        self.__UI()
-        self.get_mac(target=self.target_ip, threads=self.threads)
-    
-    def __check_obj_attribute(self)->None:
-        """This method validates attributes of instances of this class, e.g correct types, valid IP addresses
-           
-           :Return: None
-        """
+    def __repr__(self):
+        MSG = f""" 
+IP: {self.target}
+MAC: {self.target_mac}
+is_gateway: {self.is_gateway}
+"""
+        return MSG
 
-        try:
-           # Checks if IP and network addr is private
-           private_subnet =  ip.IPv4Network(self.subnet).is_private
-           private_gateway = ip.ip_address(self.gateway).is_private
-           self.subnet = ip.IPv4Network(self.subnet)
-           
-           if private_subnet and private_gateway:
-              pass 
-           else:
-              self.err_insert(text="Ip address is not private, please check both network address and IP address of gateway")
-              sys.exit()
-        except ip.AddressValueError:
-            self.err_insert(text="Invalid IP Address")
-            sys.exit()
-        
-        except ip.NetmaskValueError:
-            self.err_insert(text="Invalid subnet mask value")
-            sys.exit()
-        except ValueError:
-            self.err_insert(text="incorrect IP Format")
-            sys.exit()
-
-
-        # Checks if interval is valid
-        if self.interval.isdigit():
-           self.interval = int(self.interval)
-        else:
-          self.err_insert(text="Incorrect Interval value, make sure value is an int, e.g 2, which is also the recommended value(In seconds of course)")
-          sys.exit()
-          
-
-        if type(self.two_way_flag) is not bool:
-           self.err_insert("Something is wrong with the switch")
-           sys.exit()
-        
-        if not self.target_ip or self.target_ip == "None":
-           self.target_ip = None
-        
-        if self.target_ip and self.target_ip != "None":
-           try:
-              IPv4_obj = ip.IPv4Address(self.target_ip)
-              if IPv4_obj in list(ip.IPv4Network(self.subnet).hosts()):
-                 pass 
-              else:
-                 self.err_insert("Hmm..., target host does not appear to be in the same network. Please verify your input.")
-                 sys.exit()
-           except ip.AddressValueError:
-              self.err_insert(text="Target IP is invalid")
-              sys.exit()
-
-        if type(self.threads) is str and not self.threads:
-            self.threads = 5
-
-        elif type(self.threads) is str and self.threads:
-             if self.threads.isdigit() and int(self.threads) > 0:
-                self.threads = int(self.threads)
-             else:
-                self.err_insert(text="Remember, thread value is always a positve integer.")
-                sys.exit()
-        else:
-           self.err_insert("Unknown error with thread value, report issue to https://github.com/Haz3l-cmd")
-           sys.exit()
-
-
-
-
-          
- 
-
-    def __UI(self)->None:
-        """This method initialises the command line interface for the user
+    def UI(self)->None:
+        """This method initialises the info panel for the user
 
            :Return
         """
@@ -170,100 +80,45 @@ class Arpy:
         else:
             self.insert(text = "Two way poisoning: Disabled") 
            
-
-
-    def __get_mac(self,target:str =None)->None:
-        """This private method is invoked by get_mac
-          
-          :param target: IP addres of target, if target is None the method keeps taking an IP address from a Queue object until the Queue object is exhausted, i.e an exception is thrown as it is empty
-
-          :Return:None
-        """
-
         
-        if target is None:
-            while True:
-              try:
-
-                 current_ip=self.__IP_QUEUE.get_nowait()
-                 arp_ans = sr1(ARP(pdst=current_ip,hwlen=6,plen=4, op=1), verbose=False,timeout=1)
-                 tgt_mac = arp_ans[0].hwsrc
-                 self.__IP_TO_MAC.update({current_ip:tgt_mac})
-            
-              except queue.Empty:
-                   # self.insert(text="Finished scanning whole subnet...")
-                   break
-                   
-              except TypeError:
-                   pass
-
-              
-        else:
-            try:
-                self.insert(text=f"Sending ARP request to {target}")
-                arp_ans = sr1(ARP(pdst=target,hwlen=6,plen=4, op=1), verbose=False,timeout=1)
-                tgt_mac = arp_ans[0].hwsrc
-                self.__IP_TO_MAC.update({target:tgt_mac})
-            
-            except TypeError:
-                self.err_insert(text = "Target is down or did not respond")
-                sys.exit()
-            
-            
-
-
-
 
     
-    def get_mac(self,target:str = None,threads:int =5)->None:
-        """This method is supposed to be accessed by the user, the latter spawns a specified number of threads to scan all the IP address on the network concurrently
+    def get_mac(self,target:str = None)->None:
+        """This method is retrieves MAC address of target using ARP, upon successful reply, self.target_mac is updated
 
-           :param target: The IP address of the target,  if target is None the method keeps taking an IP address from a Queue object until the Queue object is exhausted, i.e an exception is thrown as it is empty
-           :param threads: The number of threads to be spawned to scan the network concurrently, defaults to 5 
+           :param target: The IP address of the target,
         """
-        
-        if target is None:
-            # Starts threads as specified by threads
-            self.insert(text = f"Starting {threads} threads")
-            self.insert(text="Scanning..., This will vary with respect to the number of threads running")
-            for _ in range(threads):
-                self.__THREADS.append(threading.Thread(target=self.__get_mac, daemon=True))
-               
-            for thread in self.__THREADS:
-                thread.start()
+        try:
+            arp_ans = sr1(ARP(pdst=target,hwlen=6,plen=4, op=1), verbose=False,timeout=1)
+            self.target_mac = arp_ans[0].hwsrc
+    
+        except TypeError:
+            
+            sys.exit()
 
-            for thread in self.__THREADS:
-                thread.join()
-            self.__THREADS.clear()
-        else:
-            self.__get_mac(target)
-        
-        # After scan is done, up recon.json
-        with open(RECON_PATH, "r") as fp:
-             data = json.load(fp)
-        
-        for ip,mac in self.__IP_TO_MAC.items():
-            tmp = {ip:mac}
-            data.update(tmp)
-        
-        with open(RECON_PATH, "w") as fp:
-                json.dump(data, fp, indent=4)
 
-        for key in self.__IP_TO_MAC:
-            self.insert(text = f"{key}->{self.__IP_TO_MAC.get(key)}")
-        self.insert(text="Retrieved information has been temporarily saved in /recon/recon.json")
+            
+        
+        
              
-        
-
-   
-    def set_mac(self,mac:str)->None: 
-        """setter method which changes MAC address of attacker
-           
-           :param mac: MAC address to change to
-
-           :Return: None
-        """
-        self.__LOCAL_MAC = mac
+    def save(self):        
+        if self.target_mac is not None:
+            with open(RECON_PATH, "r") as fp:
+                 data = fp.read()
+            if data:
+               data = json.loads(data)
+               data.update({self.target:{"MAC":self.target_mac,
+                                          "is_gateway":self.is_gateway}})
+            else:
+                data = {self.target:{"MAC":self.target_mac,
+                                          "is_gateway":self.is_gateway}}
+            with open(RECON_PATH, "w") as fp:
+                 json.dump(data, fp, indent=4)
+            
+            self.insert(text=f"{self.target} --> {self.target_mac}")
+            # self.insert(text="Retrieved information has been temporarily saved in /recon/recon.json")
+        else:
+            pass
 
 
     def inject_packet(self,uindex:int , interval:int):

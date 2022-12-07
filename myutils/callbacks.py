@@ -150,34 +150,5 @@ class HelpMenu(Callback):
           HELP_MSG = "<Ctrl+s> --> Save \n<Ctrl+Scroll> --> Zo0m in/out\n<Ctrl+l> --> Clear info panel\n<Ctrl+w> --> Open map(May be closed if unused\n<Ctrl+h> --> Help"
           messagebox.showinfo(title="Stuck?!", message=HELP_MSG)
 
-class InitRouter(Callback):
-      """This subclass ensures that the router is always present in the diagram"""
 
-      def __init__(self, *args, **kwargs):
-         self.args = args 
-         self.kwargs = kwargs
-
-      def __call__(self,choice):
-          self.handler(choice)
-      
-      def handler(self, choice):
-          root = self.args[0]
-          temp_dict = {choice: "None"}
-          try:
-            with open(RECON_PATH, "r") as fp:
-                 data = json.load(fp)
-            if data:
-               key_to_rplc = None
-               for key,val in data.items():
-                  if val == "None":
-                     key_to_rplc = key
-               data.pop(key_to_rplc)
-               with open(RECON_PATH, "w") as fp:
-                    data.update(temp_dict)
-                    json.dump(data, fp, indent=4)
-           
-              
-          except json.decoder.JSONDecodeError:
-                 with open(RECON_PATH, "w") as fp:
-                    json.dump(temp_dict, fp, indent=4)
            

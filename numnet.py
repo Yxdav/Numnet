@@ -9,12 +9,14 @@ from myutils.callbacks import *
 from myutils.network import *
 from modules.Arpy import *
 
+
 from typing import Callable, Dict
 from collections import OrderedDict
 from time import sleep
 from contextlib import contextmanager
 from tkinter import Canvas, messagebox, PhotoImage
 from PIL import Image, ImageTk
+from queue import Queue
 
 #Constants
 RECON_PATH = "./recon/recon.json"
@@ -31,11 +33,15 @@ class Gmap(customtkinter.CTk):
       IP:str = get_local_ip() # Gets local IP
       NET_ADDR:str = get_local_net_addr(IP) # Get network address
       MAC:str = get_mac() # Get local MAC which may be spoofed
-      hosts_list:list = all_hosts(NET_ADDR) # List of all hosts in the subnet
+      hosts_list:list[str] = all_hosts(NET_ADDR) # List of all hosts in the subnet
       hosts_list.insert(0, "None")
+      instances = Queue()
+      scanned_instances = []
+
       #Internals constants for configuration purposes
       MODULE_DICT:Dict[str, Callable] = OrderedDict() # Maps module to their respective method that constructs their options interface
       CURRENT_MODULES = {"current": None} # Keep track of current module
+      THREADS = None
       
       #Mapper constants
       TAG_TO_ICON = OrderedDict() # Maps Tags to PhotoImage objects
@@ -111,17 +117,21 @@ class Gmap(customtkinter.CTk):
           self.setup() # Sets up actual user interface
       
       @contextmanager
-      def change_state(self)->None:
+      def change_state(self, widget,init_state:str , final_state:str)->None:
           """This method acts as a context mananger and yields the Textbox widget(Used to dsiplay info)
              It changes the state to normal(normally this would be in the __enter__ dunder method) so that data can be wrritten and upon exit(__exit__) the Textbox is set back read-only 
-
+             
+             :param widget: Frame/Widget to change state off
+             :param init_state: Initial state for widget, normal is enabled, disabled for disabled
+             :param final: Initial state for widget, normal is enabled, disabled for disabled
+             
              :return: None
           """
           try:
-             self.inner_info_panel_text_box.configure(state="normal")
-             yield self.inner_info_panel_text_box
+             widget.configure(state=init_state)
+             yield widget
           finally:
-             self.inner_info_panel_text_box.configure(state="disabled")
+             widget.configure(state=final_state)
 
       
       def setup(self)->None:
@@ -191,7 +201,7 @@ class Gmap(customtkinter.CTk):
 
              :Return: None
           """
-          with self.change_state() as text_box:
+          with self.change_state(self.inner_info_panel_text_box, "normal", "disabled") as text_box:
                text_box.delete("1.0", "end")
          
       
@@ -255,6 +265,9 @@ class Gmap(customtkinter.CTk):
              so as to not eat up all your RAM
 
              :Return: None
+
+             parsed config file looks like this --> {IP:{MAC:MAC,
+                                                        is_gateway:bool}}
           """
           try:
             if len(self.my_canvas.find_all()) > 1:
@@ -269,15 +282,15 @@ class Gmap(customtkinter.CTk):
             with open(RECON_PATH, "r") as fp:
                  data = json.load(fp)
             
-            for key in data:
-                
-                if key == self.gateway_ip_value.get():
-                  self.generate_icon(ROUTER_PATH, f"IP: {key}\n MAC:{data.get(key)}")
-                else:
-                  self.generate_icon(COMP_PATH, f"IP: {key}\nMAC:{data.get(key)}")
+            for key, value in data.items():
+                if value.get("is_gateway") is True:
+                    self.generate_icon(ROUTER_PATH, f"IP: {key}\nMAC: {value.get('MAC')}")
+            for key, value in data.items():
+                if value.get("is_gateway") is not True:
+                    self.generate_icon(COMP_PATH, f"IP: {key}\nMAC: {value.get('MAC')}")
 
           except json.decoder.JSONDecodeError:
-                 pass
+                 self.err_insert(text="Scan the network first to construct the map")
           
 
          
@@ -350,6 +363,7 @@ class Gmap(customtkinter.CTk):
 
             # See implementation of MoveCompIcon() in myutils/callbacks.py
             self.my_canvas.tag_bind(self.my_image,"<Button1-Motion>", MoveCompIcons(self, self.my_image, self.text_tag, self.line_tag ), add="+")
+            self.my_canvas.tag_bind(self.my_image,"<Button3>", ArpyOption(self), add="+")
             self.my_canvas.create_text(x3, y3, text=text, fill="white",tags=self.text_tag, anchor="nw")
            
           else:
@@ -386,11 +400,20 @@ class Gmap(customtkinter.CTk):
             self.my_canvas.create_text(x1, y2-20, text=None, fill="white",tags=self.text_tag, anchor="nw", width=(x2-x1)+20) #Filler
         
         except  Exception as e:
-               with self.change_state() as tbox:
+               with self.change_state(self.inner_info_panel_text_box, "normal", "disabled") as tbox:
                      tbox.configure(text_color="red")
-                     tbox.insert(index="end", text="\n[Frequent change detected!!]-> Your seeing because you are probably changing settings unnecessarily and which doesn't exacly make sense. Please restart your application. Report issue to https://github.com/Haz3l-cmd/Numnet")
+                     tbox.insert(index="end", text="\n[Whoops!] An error occured, please restart your application and report issue to https://github.com/Haz3l-cmd/Numnet")
                      tbox.insert(index="end", text=f"\n{e}")
+        
+      def none_converter(self, value:str)-> None|str:
+            """This method takes a string value and if is is equal to "None" return None else return value back
 
+               :param value: A string
+            """
+            if value == "None":
+               return None
+            else:
+               return value
       
       def ARP_options_ui(self, frame)->None:
           """This method is responsible for constructing the interface that allows users to
@@ -402,7 +425,7 @@ class Gmap(customtkinter.CTk):
             :Return: None
           """
           
-          self.grid_maker(row=7, column=3, weight=1, widget=frame,)
+          self.grid_maker(row=5, column=3, weight=1, widget=frame,)
 
           self.target_ip_label = customtkinter.CTkLabel(master=frame, text="Target IP :", font=("robot", self.LABEL_FONT_SIZE))
           self.target_ip_label.grid(row=0, column=0, pady=self.PADDING, padx=self.PADDING,)
@@ -414,30 +437,31 @@ class Gmap(customtkinter.CTk):
           self.gateway_ip_label.grid(row=1, column=0, pady=self.PADDING, padx=self.PADDING,)
           self.gateway_ip_value = customtkinter.CTkOptionMenu(master=frame, values=self.hosts_list)
           self.gateway_ip_value.grid(row=1, column=1, pady=self.PADDING)
-          self.gateway_ip_value.configure(command=InitRouter(self))
-          
+                 
           self.net_ip_label = customtkinter.CTkLabel(master=frame, text="Subnet IP :", font=("robot", self.LABEL_FONT_SIZE))
           self.net_ip_label.grid(row=2, column=0, pady=self.PADDING, padx=self.PADDING,)
           self.net_ip_value = customtkinter.CTkLabel(master=frame, text=self.NET_ADDR, font=("robot", self.LABEL_FONT_SIZE) )
           self.net_ip_value.grid(row=2, column=1, pady=self.PADDING)          
           
-          self.interval_label = customtkinter.CTkLabel(master=frame, text="Interval :", font=("robot", self.LABEL_FONT_SIZE))
-          self.interval_label.grid(row=3, column=0, pady=self.PADDING, padx=self.PADDING,)
-          self.interval_value = customtkinter.CTkEntry(master=frame, border_width=2, corner_radius=10, placeholder_text="interger")
-          self.interval_value.grid(row=3, column=1, pady=self.PADDING)         
+          # self.interval_label = customtkinter.CTkLabel(master=frame, text="Interval :", font=("robot", self.LABEL_FONT_SIZE))
+          # self.interval_label.grid(row=3, column=0, pady=self.PADDING, padx=self.PADDING,)
+          # self.interval_value = customtkinter.CTkEntry(master=frame, border_width=2, corner_radius=10, placeholder_text="interger")
+          # self.interval_value.grid(row=3, column=1, pady=self.PADDING)         
           
-          self.threads_label = customtkinter.CTkLabel(master=frame, text="threads :", font=("robot", self.LABEL_FONT_SIZE))
-          self.threads_label.grid(row=4, column=0, pady=self.PADDING, padx=self.PADDING,)
-          self.threads_value = customtkinter.CTkEntry(master=frame, border_width=2, corner_radius=10, placeholder_text="interger")
-          self.threads_value.grid(row=4, column=1, pady=self.PADDING)
+          # self.threads_label = customtkinter.CTkLabel(master=frame, text="threads :", font=("robot", self.LABEL_FONT_SIZE))
+          # self.threads_label.grid(row=3, column=0, pady=self.PADDING, padx=self.PADDING,)
+          # self.threads_value = customtkinter.CTkEntry(master=frame, border_width=2, corner_radius=10, placeholder_text="interger")
+          # self.threads_value.grid(row=3, column=1, pady=self.PADDING)
           
-          self.two_way_label = customtkinter.CTkLabel(master=frame, text="Enable two-way poisoning :", font=("roboto", self.LABEL_FONT_SIZE))
-          self.two_way_label.grid(row=5, column=0, pady=self.PADDING, padx=self.PADDING,)
-          self.two_way_value = customtkinter.CTkSwitch(master=frame, text=None)
-          self.two_way_value.grid(row=5, column=1, pady=self.PADDING )
-
-          scan_button = customtkinter.CTkButton(master=frame, text="Scan", command=self.ARP_scan )
-          scan_button.grid(row=6, column=1, pady=self.PADDING)
+          # self.two_way_label = customtkinter.CTkLabel(master=frame, text="Enable two-way poisoning :", font=("roboto", self.LABEL_FONT_SIZE))
+          # self.two_way_label.grid(row=5, column=0, pady=self.PADDING, padx=self.PADDING,)
+          # self.two_way_value = customtkinter.CTkSwitch(master=frame, text=None)
+          # self.two_way_value.grid(row=5, column=1, pady=self.PADDING )
+          self.update_button = customtkinter.CTkButton(master=frame, text="Update!", command=self.update )
+          self.update_button.grid(row=3, column=0, pady=self.PADDING)
+          
+          self.scan_button = customtkinter.CTkButton(master=frame, text="Scan", command=self.ARP_scan )
+          self.scan_button.grid(row=3, column=1, pady=self.PADDING)
         
       def ARP_scan(self)->None:
           """This function starts the scan and interfaces with this file(__file__) to display results
@@ -446,27 +470,49 @@ class Gmap(customtkinter.CTk):
 
              :Return: None
           """
-          tgt_ip = self.target_ip_value.get()
-          gtw_ip = self.gateway_ip_value .get()
-          net_ip = self.NET_ADDR
-          interval = self.interval_value.get()
-          threads = self.threads_value.get()
-          two_way_flag = bool(self.two_way_value.get())
-          ARP_thread = threading.Thread(target=Arpy,
-                                        daemon=True,
-                                        args=(net_ip, gtw_ip,self.MAC), 
-                                        kwargs={"interval":interval, 
-                                                "two_way_flag":two_way_flag, 
-                                                "output_frame":self.inner_info_panel_text_box,
-                                                "target_ip": tgt_ip,
-                                                 "threads": threads},)
-          ARP_thread.start()
+          with self.change_state(self.scan_button, "disabled", "normal") as buttton:
+              self.insert(text="Starting scan...")
+              target = self.none_converter(self.target_ip_value.get())
+              gateway =  self.gateway_ip_value.get()
+    
+              threads = []
+              if  target is None and self.instances.empty():
+                    for ip in self.hosts_list:
+                        if ip != "None":
+                           arpy = Arpy(target = ip, gateway = gateway, output_frame = self.inner_info_panel_text_box)
+                           t = threading.Thread(target=arpy.get_mac, kwargs={"target":arpy.target})
+                           threads.append(t)
+                           self.instances.put(arpy)
+                           t.start()
+              
+              else:
+                arpy = Arpy(target = target, gateway = gateway, output_frame = self.inner_info_panel_text_box)
+                Garpy = Arpy(target = gateway, gateway = gateway, output_frame = self.inner_info_panel_text_box)
+                self.instances.put(arpy)
+                self.instances.put(Garpy)
+                threading.Thread(target=arpy.get_mac, kwargs={"target":arpy.target}).start()
+                threading.Thread(target=Garpy.get_mac, kwargs={"target":Garpy.target}).start()
+             
+              
+                
+              
+              threads.clear()
+              self.insert(text="Finshed scanning...")
+              
+              
 
-         
-          
+              
+           
 
 
-        
+      def update(self):
+          for _ in range(len(self.hosts_list)-1):
+                  try:
+                     obj = self.instances.get_nowait()
+                     obj.save()
+                  except queue.Empty:
+                         self.err_insert(text="It seems like there are no new hosts online")
+                         break
 
       def UDP_options_ui(self, frame):
          """In developement"""
@@ -478,7 +524,32 @@ class Gmap(customtkinter.CTk):
          """Implement"""
 
 
+      def insert(self, text:str =None)->None:
+        """This method outputs message to info panel, you can think of it as redirecting stdout to info panel
+           
+           :param text: text to ouput
+           :Return:None
+        """
+        self.inner_info_panel_text_box.configure(text_color="lime green")
+        self.inner_info_panel_text_box.configure(state="normal")
+        self.inner_info_panel_text_box.insert(index="end", text="\n[{}] (Using {}) : [+] {}".format(strftime("%H:%M:%S"),self.CURRENT_MODULES.get("current"), text))
+        self.inner_info_panel_text_box.configure(state="disabled")
+    
+    
+      def err_insert(self, text=None):
+        """This method outputs error message to info panel, you can think of it as redirecting stderr to info panel
+           
+           :param text: text to ouput
+           :Return:None
+        """
+        self.inner_info_panel_text_box.configure(text_color="orange")
+        self.inner_info_panel_text_box.configure(state="normal")
+        self.inner_info_panel_text_box.insert(index="end", text="\n[{}] (Using {}) : [-] {}".format(strftime("%H:%M:%S"),self.CURRENT_MODULES.get("current"), text))
+        self.inner_info_panel_text_box.configure(state="disabled")
+
+
 app = Gmap()
+
 app.mainloop()
 
 
