@@ -518,13 +518,16 @@ class Gmap(customtkinter.CTk):
 
 
       def update(self):
+          self.scanned_instances.clear()
           for _ in range(len(self.hosts_list)-1):
                   try:
                      obj = self.instances.get_nowait()
+                     self.scanned_instances.append(obj)
                      obj.save()
                   except queue.Empty:
                          self.err_insert(text="It seems like there are no new hosts online")
                          break
+          
 
       def UDP_options_ui(self, frame):
          """In developement"""
