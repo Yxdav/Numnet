@@ -35,4 +35,4 @@ Numnet is a network enumeration tool written entirely in python and provides the
 # Warning
 - *This program has only been tested on windows so far, hence Linux users or users from other operating systems may experience compatibility issues. However, we assure we are working to make sure that this program can run on almost all platforms*
 - If the program was not closed proporly and you experience some issue, try deleting /recon/recon.json
-
+- Despite including all the features(including ARP cache poisoning), it has not been tested and does not validate user input. Feel free to play around with it
