@@ -29,6 +29,7 @@ Numnet is a network enumeration tool written entirely in python and provides the
 - `Ctrl+w` --> Opens the network mapper, this allows you to visualise the network
 - `Ctrl+Scroll` --> Zoom in/out of info panel
 - `Ctrl+l` --> Clear info panel
+- `Right-Click` --> Only works if cursor is on a host icon. Doing so provides a top level window to initiate and stop the ARP cache poisoning attack
 
 
 ---
