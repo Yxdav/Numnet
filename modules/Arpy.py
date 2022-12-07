@@ -26,7 +26,8 @@ class Arpy:
     """
     
     MODULE_NAME = "Arpy"
-    
+    interval = None
+    two_way = False
 
     #Variables that should not be altered
     
@@ -37,6 +38,7 @@ class Arpy:
            :param gateway: IP address of gateway
         """
         self.target_mac = None 
+
         self.target = target
         self.gateway = gateway
         self.frame = output_frame

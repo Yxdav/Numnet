@@ -255,7 +255,7 @@ class Gmap(customtkinter.CTk):
              self.my_canvas.bind("<Control-s>", SaveFile())
              self.TL_COUNT += 1
             else:
-                with self.change_state() as tbox:
+                with self.change_state(self.inner_info_panel_text_box, "normal", "disabled") as tbox:
                      tbox.configure(text_color="orange")
                      tbox.insert(index="end", text="\n[-]Only one top level window can be opened at a time")
 
@@ -363,7 +363,7 @@ class Gmap(customtkinter.CTk):
 
             # See implementation of MoveCompIcon() in myutils/callbacks.py
             self.my_canvas.tag_bind(self.my_image,"<Button1-Motion>", MoveCompIcons(self, self.my_image, self.text_tag, self.line_tag ), add="+")
-            self.my_canvas.tag_bind(self.my_image,"<Button3>", ArpyOption(self), add="+")
+            # self.my_canvas.tag_bind(self.my_image,"<Button3-ButtonPress>", self.attack, add="+")
             self.my_canvas.create_text(x3, y3, text=text, fill="white",tags=self.text_tag, anchor="nw")
            
           else:
@@ -415,6 +415,24 @@ class Gmap(customtkinter.CTk):
             else:
                return value
       
+      def attack(self):
+          self.attack_opt = customtkinter.CTkToplevel(self)
+          self.attack_opt.minsize(400, 400)
+          self.grid_maker(row = 3, column = 2, widget=self.attack_opt)
+
+          self.interval_label = customtkinter.CTkLabel(master=self.attack_opt, text="Interval :", font=("robot", self.LABEL_FONT_SIZE))
+          self.interval_label.grid(row=0, column=0, pady=self.PADDING, padx=self.PADDING,)
+          self.interval_value = customtkinter.CTkEntry(master=self.attack_opt, border_width=2, corner_radius=10, placeholder_text="interger")
+          self.interval_value.grid(row=0, column=1, pady=self.PADDING) 
+
+          self.two_way_label = customtkinter.CTkLabel(master=self.attack_opt, text="Enable two-way poisoning :", font=("roboto", self.LABEL_FONT_SIZE))
+          self.two_way_label.grid(row=1, column=0, pady=self.PADDING, padx=self.PADDING,)
+          self.two_way_value = customtkinter.CTkSwitch(master=self.attack_opt, text=None)
+          self.two_way_value.grid(row=1, column=1, pady=self.PADDING )
+
+          self.att_btn = customtkinter.CTkButton(master=self.attack_opt, text="Run", font=("roboto", self.LABEL_FONT_SIZE))
+          self.att_btn.grid(row=2, column=1, pady=self.PADDING )
+
       def ARP_options_ui(self, frame)->None:
           """This method is responsible for constructing the interface that allows users to
             to change module options accordingly and is module dependent, i.e each module will have it's dedicated
@@ -443,20 +461,14 @@ class Gmap(customtkinter.CTk):
           self.net_ip_value = customtkinter.CTkLabel(master=frame, text=self.NET_ADDR, font=("robot", self.LABEL_FONT_SIZE) )
           self.net_ip_value.grid(row=2, column=1, pady=self.PADDING)          
           
-          # self.interval_label = customtkinter.CTkLabel(master=frame, text="Interval :", font=("robot", self.LABEL_FONT_SIZE))
-          # self.interval_label.grid(row=3, column=0, pady=self.PADDING, padx=self.PADDING,)
-          # self.interval_value = customtkinter.CTkEntry(master=frame, border_width=2, corner_radius=10, placeholder_text="interger")
-          # self.interval_value.grid(row=3, column=1, pady=self.PADDING)         
+                 
           
           # self.threads_label = customtkinter.CTkLabel(master=frame, text="threads :", font=("robot", self.LABEL_FONT_SIZE))
           # self.threads_label.grid(row=3, column=0, pady=self.PADDING, padx=self.PADDING,)
           # self.threads_value = customtkinter.CTkEntry(master=frame, border_width=2, corner_radius=10, placeholder_text="interger")
           # self.threads_value.grid(row=3, column=1, pady=self.PADDING)
           
-          # self.two_way_label = customtkinter.CTkLabel(master=frame, text="Enable two-way poisoning :", font=("roboto", self.LABEL_FONT_SIZE))
-          # self.two_way_label.grid(row=5, column=0, pady=self.PADDING, padx=self.PADDING,)
-          # self.two_way_value = customtkinter.CTkSwitch(master=frame, text=None)
-          # self.two_way_value.grid(row=5, column=1, pady=self.PADDING )
+         
           self.update_button = customtkinter.CTkButton(master=frame, text="Update!", command=self.update )
           self.update_button.grid(row=3, column=0, pady=self.PADDING)
           
