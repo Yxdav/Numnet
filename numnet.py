@@ -41,6 +41,7 @@ class Gmap(customtkinter.CTk):
       #Internals constants for configuration purposes
       MODULE_DICT:Dict[str, Callable] = OrderedDict() # Maps module to their respective method that constructs their options interface
       CURRENT_MODULES = {"current": None} # Keep track of current module
+      CURRENT_OBJ = None
       THREADS = None
       
       #Mapper constants
@@ -416,6 +417,7 @@ class Gmap(customtkinter.CTk):
                return value
       
       def attack(self, *args):
+          """Top level frame for starting attack"""
           self.attack_opt = customtkinter.CTkToplevel(self)
           self.attack_opt.maxsize(400, 400)
           self.grid_maker(row = 4, column = 2, widget=self.attack_opt)
@@ -436,14 +438,23 @@ class Gmap(customtkinter.CTk):
           self.target_ipt_value.grid(row=2, column=1, pady=self.PADDING)
 
           self.att_btn = customtkinter.CTkButton(master=self.attack_opt, text="Run", font=("roboto", self.LABEL_FONT_SIZE), command = self.start_attack)
+          self.stop_btn = customtkinter.CTkButton(master=self.attack_opt, text="Stop", font=("roboto", self.LABEL_FONT_SIZE), command = self.stop_attack)
           self.att_btn.grid(row=3, column=1, pady=self.PADDING )
+          self.stop_btn.grid(row=3, column=0, pady=self.PADDING )
       
       def start_attack(self):
+          """This method actually starts the attack"""
           for obj in self.scanned_instances:
+              obj.STOP = False
               if obj.target == self.target_ipt_value.get():
+                 self.CURRENT_OBJ = obj
                  obj.interval = int(self.interval_value.get())
                  obj.two_way = bool( self.two_way_value.get())
                  threading.Thread(target=obj.inject_packet, args=(self.IP,), daemon=True).start()
+                 
+      def stop_attack(self):
+          """This function stops the attack by setting the flag"""
+          self.CURRENT_OBJ.STOP = True
 
       def ARP_options_ui(self, frame)->None:
           """This method is responsible for constructing the interface that allows users to

