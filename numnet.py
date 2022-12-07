@@ -363,7 +363,7 @@ class Gmap(customtkinter.CTk):
 
             # See implementation of MoveCompIcon() in myutils/callbacks.py
             self.my_canvas.tag_bind(self.my_image,"<Button1-Motion>", MoveCompIcons(self, self.my_image, self.text_tag, self.line_tag ), add="+")
-            # self.my_canvas.tag_bind(self.my_image,"<Button3-ButtonPress>", self.attack, add="+")
+            self.my_canvas.tag_bind(self.my_image,"<ButtonPress-3>", self.attack, add="+")
             self.my_canvas.create_text(x3, y3, text=text, fill="white",tags=self.text_tag, anchor="nw")
            
           else:
@@ -415,10 +415,10 @@ class Gmap(customtkinter.CTk):
             else:
                return value
       
-      def attack(self):
+      def attack(self, *args):
           self.attack_opt = customtkinter.CTkToplevel(self)
-          self.attack_opt.minsize(400, 400)
-          self.grid_maker(row = 3, column = 2, widget=self.attack_opt)
+          self.attack_opt.maxsize(400, 400)
+          self.grid_maker(row = 4, column = 2, widget=self.attack_opt)
 
           self.interval_label = customtkinter.CTkLabel(master=self.attack_opt, text="Interval :", font=("robot", self.LABEL_FONT_SIZE))
           self.interval_label.grid(row=0, column=0, pady=self.PADDING, padx=self.PADDING,)
@@ -429,9 +429,21 @@ class Gmap(customtkinter.CTk):
           self.two_way_label.grid(row=1, column=0, pady=self.PADDING, padx=self.PADDING,)
           self.two_way_value = customtkinter.CTkSwitch(master=self.attack_opt, text=None)
           self.two_way_value.grid(row=1, column=1, pady=self.PADDING )
+          
+          self.target_ipt_label = customtkinter.CTkLabel(master=self.attack_opt, text="Target IP :", font=("robot", self.LABEL_FONT_SIZE))
+          self.target_ipt_label.grid(row=2, column=0, pady=self.PADDING, padx=self.PADDING,)
+          self.target_ipt_value = customtkinter.CTkComboBox(master=self.attack_opt, values=self.hosts_list)
+          self.target_ipt_value.grid(row=2, column=1, pady=self.PADDING)
 
-          self.att_btn = customtkinter.CTkButton(master=self.attack_opt, text="Run", font=("roboto", self.LABEL_FONT_SIZE))
-          self.att_btn.grid(row=2, column=1, pady=self.PADDING )
+          self.att_btn = customtkinter.CTkButton(master=self.attack_opt, text="Run", font=("roboto", self.LABEL_FONT_SIZE), command = self.start_attack)
+          self.att_btn.grid(row=3, column=1, pady=self.PADDING )
+      
+      def start_attack(self):
+          for obj in self.scanned_instances:
+              if obj.target == self.target_ipt_value.get():
+                 obj.interval = int(self.interval_value.get())
+                 obj.two_way = bool( self.two_way_value.get())
+                 obj.inject_packet()
 
       def ARP_options_ui(self, frame)->None:
           """This method is responsible for constructing the interface that allows users to
@@ -527,7 +539,7 @@ class Gmap(customtkinter.CTk):
                   except queue.Empty:
                          self.err_insert(text="It seems like there are no new hosts online")
                          break
-          
+
 
       def UDP_options_ui(self, frame):
          """In developement"""
