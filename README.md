@@ -41,3 +41,6 @@ https://user-images.githubusercontent.com/91953982/205724566-5499f469-c436-4ee4-
 - If the program was not closed proporly and you experience some issue, try deleting /recon/recon.json
 - This is the stable Version
 
+---
+
+By [Yadav Sitaram](https://www.yadavsitaram.com) - Port Louis, Mauritius. More projects and writing at [yadavsitaram.com](https://www.yadavsitaram.com/#work).
